@@ -1,0 +1,271 @@
+{
+  "entities": {
+    "UserPublic": {
+      "title": "UserPublic",
+      "description": "Public user profile excluding PII.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the user."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Public display name."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["member", "creator"],
+          "description": "User role within MR Wallpapers."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Account creation server timestamp."
+        }
+      },
+      "required": ["uid", "displayName", "role", "createdAt"]
+    },
+    "UserPrivate": {
+      "title": "UserPrivate",
+      "description": "Isolated PII record storing registered user email address.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the user."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 160,
+          "description": "Registered user email address."
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Registered user display name."
+        },
+        "accountType": {
+          "type": "string",
+          "enum": ["signin", "register"],
+          "description": "How the account record was initialized."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Registration server timestamp."
+        }
+      },
+      "required": ["uid", "email", "displayName", "accountType", "createdAt"]
+    },
+    "Wallpaper": {
+      "title": "Wallpaper",
+      "description": "Curated static or live wallpaper metadata and fast preview asset.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Wallpaper title."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 0,
+          "maxLength": 600,
+          "description": "Wallpaper description and material notes."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Abstract", "Cyber", "Nature", "Architecture", "Minimal", "Anime", "Space", "Live Motion"],
+          "description": "Primary visual category."
+        },
+        "mediaType": {
+          "type": "string",
+          "enum": ["static", "live"],
+          "description": "Whether this is a static high-res image or a live motion wallpaper."
+        },
+        "aspectRatio": {
+          "type": "string",
+          "enum": ["9:16", "16:9", "4:3", "1:1", "21:9"],
+          "description": "Target display aspect ratio."
+        },
+        "resolutionLabel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "Resolution badge label such as 8K RAW or 4K 60FPS."
+        },
+        "fileSizeBytes": {
+          "type": "number",
+          "description": "Master asset byte size."
+        },
+        "previewDataUrl": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 750000,
+          "description": "Optimized preview image or video data URL."
+        },
+        "accentColor": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 20,
+          "description": "Dominant hex color."
+        },
+        "authorId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Creator UID."
+        },
+        "authorName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "Creator display name."
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public"],
+          "description": "Visibility flag for secure list query enforcement."
+        },
+        "downloadsCount": {
+          "type": "number",
+          "description": "Total download count."
+        },
+        "savesCount": {
+          "type": "number",
+          "description": "Total Pinterest-style board saves count."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Upload server timestamp."
+        }
+      },
+      "required": [
+        "title",
+        "description",
+        "category",
+        "mediaType",
+        "aspectRatio",
+        "resolutionLabel",
+        "fileSizeBytes",
+        "previewDataUrl",
+        "accentColor",
+        "authorId",
+        "authorName",
+        "visibility",
+        "downloadsCount",
+        "savesCount",
+        "createdAt"
+      ]
+    },
+    "WallpaperChunk": {
+      "title": "WallpaperChunk",
+      "description": "Binary data chunk for high-resolution or live video wallpaper storage.",
+      "type": "object",
+      "properties": {
+        "wallpaperId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Parent wallpaper document ID."
+        },
+        "chunkIndex": {
+          "type": "number",
+          "description": "Zero-based index of this chunk."
+        },
+        "totalChunks": {
+          "type": "number",
+          "description": "Total chunks for the asset."
+        },
+        "data": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 800000,
+          "description": "Base64 slice of the master file."
+        },
+        "authorId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Creator UID."
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public"],
+          "description": "Visibility flag."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Chunk upload timestamp."
+        }
+      },
+      "required": ["wallpaperId", "chunkIndex", "totalChunks", "data", "authorId", "visibility", "createdAt"]
+    },
+    "SavedPin": {
+      "title": "SavedPin",
+      "description": "User saved wallpaper pin in a Pinterest-style collection board.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Owner user UID."
+        },
+        "wallpaperId": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Saved wallpaper ID."
+        },
+        "boardName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60,
+          "description": "Name of the user's collection board."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Save server timestamp."
+        }
+      },
+      "required": ["userId", "wallpaperId", "boardName", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserPublic" },
+      "description": "Public user profiles without PII."
+    },
+    "/user_private/{userId}": {
+      "schema": { "$ref": "#/entities/UserPrivate" },
+      "description": "Private PII vault containing registered user emails, accessible only to the owner or admin."
+    },
+    "/wallpapers/{wallpaperId}": {
+      "schema": { "$ref": "#/entities/Wallpaper" },
+      "description": "Publicly browsable static and live wallpapers uploaded via the Vidusha creator portal."
+    },
+    "/wallpapers/{wallpaperId}/chunks/{chunkId}": {
+      "schema": { "$ref": "#/entities/WallpaperChunk" },
+      "description": "Data chunks for streaming full-resolution or live video wallpapers."
+    },
+    "/saves/{saveId}": {
+      "schema": { "$ref": "#/entities/SavedPin" },
+      "description": "User saved wallpaper pins organized by board."
+    }
+  }
+}

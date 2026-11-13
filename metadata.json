@@ -1,0 +1,6 @@
+{
+  "name": "MR Wallpapers",
+  "description": "High-resolution dark gallery for static and live wallpapers curated by Vidusha, featuring Pinterest-style masonry browsing, instant high-speed downloads, and a creator upload portal.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

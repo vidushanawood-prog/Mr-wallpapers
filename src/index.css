@@ -1,0 +1,65 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-display: 'Bricolage Grotesque', sans-serif;
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  html {
+    font-family: var(--font-sans);
+    background-color: #06060e;
+    color: #f4f4f5;
+    color-scheme: dark;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #06060e;
+    background-image:
+      radial-gradient(circle at 12% 18%, rgba(225, 29, 72, 0.22) 0%, transparent 38%),
+      radial-gradient(circle at 86% 14%, rgba(124, 58, 237, 0.22) 0%, transparent 40%),
+      radial-gradient(circle at 50% 55%, rgba(6, 182, 212, 0.14) 0%, transparent 48%),
+      radial-gradient(circle at 82% 85%, rgba(245, 158, 11, 0.16) 0%, transparent 42%),
+      radial-gradient(circle at 18% 88%, rgba(236, 72, 153, 0.16) 0%, transparent 40%);
+    background-attachment: fixed;
+    color: #f4f4f5;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.font-sans {
+  font-family: var(--font-sans);
+}
+
+.font-mono-tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom subtle scrollbars for dark gallery */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #06060e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}

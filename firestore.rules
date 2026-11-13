@@ -1,0 +1,283 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // Hardened Global Primitive Helpers
+    // =========================================================================
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Zero-lookup admin check safe for list queries (no get/exists calls)
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'vidushanawood@gmail.com';
+    }
+
+    // Full Admin helper for single-document operations
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isVerifiedUser() && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // =========================================================================
+    // Entity Validation Blueprints
+    // =========================================================================
+
+    function isValidUserPublic(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'role', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'displayName', 'role', 'createdAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.uid == request.auth.uid &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+        data.role is string && data.role.size() <= 20 && (data.role == 'member' || data.role == 'creator') &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidUserPrivate(data) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'accountType', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'displayName', 'accountType', 'createdAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.uid == request.auth.uid &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+        data.accountType is string && data.accountType.size() <= 20 && (data.accountType == 'signin' || data.accountType == 'register') &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidWallpaper(data) {
+      return data.keys().hasAll([
+          'title', 'description', 'category', 'mediaType', 'aspectRatio',
+          'resolutionLabel', 'fileSizeBytes', 'previewDataUrl', 'accentColor',
+          'authorId', 'authorName', 'visibility', 'downloadsCount', 'savesCount', 'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'title', 'description', 'category', 'mediaType', 'aspectRatio',
+          'resolutionLabel', 'fileSizeBytes', 'previewDataUrl', 'accentColor',
+          'authorId', 'authorName', 'visibility', 'downloadsCount', 'savesCount', 'createdAt'
+        ]) &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+        data.description is string && data.description.size() >= 0 && data.description.size() <= 600 &&
+        data.category is string && data.category.size() <= 40 && (
+          data.category == 'Abstract' || data.category == 'Cyber' || data.category == 'Nature' ||
+          data.category == 'Architecture' || data.category == 'Minimal' || data.category == 'Anime' ||
+          data.category == 'Space' || data.category == 'Live Motion'
+        ) &&
+        data.mediaType is string && data.mediaType.size() <= 20 && (data.mediaType == 'static' || data.mediaType == 'live') &&
+        data.aspectRatio is string && data.aspectRatio.size() <= 10 && (
+          data.aspectRatio == '9:16' || data.aspectRatio == '16:9' || data.aspectRatio == '4:3' ||
+          data.aspectRatio == '1:1' || data.aspectRatio == '21:9'
+        ) &&
+        data.resolutionLabel is string && data.resolutionLabel.size() >= 1 && data.resolutionLabel.size() <= 40 &&
+        data.fileSizeBytes is int && data.fileSizeBytes >= 0 && data.fileSizeBytes <= 1073741824 &&
+        data.previewDataUrl is string && data.previewDataUrl.size() >= 10 && data.previewDataUrl.size() <= 750000 &&
+        data.accentColor is string && data.accentColor.size() >= 4 && data.accentColor.size() <= 20 &&
+        data.authorId is string && data.authorId.size() >= 1 && data.authorId.size() <= 128 && data.authorId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 80 &&
+        data.visibility is string && data.visibility.size() <= 20 && data.visibility == 'public' &&
+        data.downloadsCount is int && data.downloadsCount >= 0 &&
+        data.savesCount is int && data.savesCount >= 0 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidWallpaperChunk(data, wallpaperId) {
+      return data.keys().hasAll(['wallpaperId', 'chunkIndex', 'totalChunks', 'data', 'authorId', 'visibility', 'createdAt']) &&
+        data.keys().hasOnly(['wallpaperId', 'chunkIndex', 'totalChunks', 'data', 'authorId', 'visibility', 'createdAt']) &&
+        data.wallpaperId is string && data.wallpaperId.size() >= 1 && data.wallpaperId.size() <= 128 && data.wallpaperId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.wallpaperId == wallpaperId &&
+        data.chunkIndex is int && data.chunkIndex >= 0 && data.chunkIndex <= 200 &&
+        data.totalChunks is int && data.totalChunks >= 1 && data.totalChunks <= 200 &&
+        data.data is string && data.data.size() >= 1 && data.data.size() <= 800000 &&
+        data.authorId is string && data.authorId.size() >= 1 && data.authorId.size() <= 128 && data.authorId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.authorId == request.auth.uid &&
+        data.visibility is string && data.visibility.size() <= 20 && data.visibility == 'public' &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidSavedPin(data) {
+      return data.keys().hasAll(['userId', 'wallpaperId', 'boardName', 'createdAt']) &&
+        data.keys().hasOnly(['userId', 'wallpaperId', 'boardName', 'createdAt']) &&
+        data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 && data.userId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.userId == request.auth.uid &&
+        data.wallpaperId is string && data.wallpaperId.size() >= 1 && data.wallpaperId.size() <= 128 && data.wallpaperId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.boardName is string && data.boardName.size() >= 1 && data.boardName.size() <= 60 &&
+        data.createdAt is timestamp;
+    }
+
+    // =========================================================================
+    // Collection Rules
+    // =========================================================================
+
+    // 0. Connection Test Path (Read-Only Non-Existent Check)
+    match /test/connection {
+      allow get: if true;
+      allow list, write: if false;
+    }
+
+    // 1. Admins Lookup Collection (Read-only for self, never client-writable)
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && request.auth.uid == adminId;
+      allow list, create, update, delete: if false;
+    }
+
+    // 2. Public User Profiles (/users/{userId}) - Zero PII
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.uid == request.auth.uid || isBootstrappedAdmin());
+
+      allow create: if isVerifiedUser() &&
+        isValidId(userId) &&
+        isOwner(userId) &&
+        isValidUserPublic(incoming()) &&
+        incoming().createdAt == request.time &&
+        (incoming().role == 'member' || isAdmin());
+
+      allow update: if isVerifiedUser() &&
+        isValidId(userId) &&
+        isValidUserPublic(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt && (
+          isAdmin() ||
+          (isOwner(userId) &&
+            incoming().role == existing().role &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['displayName']))
+        );
+
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // 3. Private User Email Vault (/user_private/{userId}) - Strict PII Isolation
+    match /user_private/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.uid == request.auth.uid || isBootstrappedAdmin());
+
+      allow create: if isVerifiedUser() &&
+        isValidId(userId) &&
+        isOwner(userId) &&
+        isValidUserPrivate(incoming()) &&
+        incoming().createdAt == request.time;
+
+      allow update: if isVerifiedUser() &&
+        isValidId(userId) &&
+        isValidUserPrivate(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt && (
+          isAdmin() ||
+          (isOwner(userId) &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'accountType']))
+        );
+
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // 4. Curated Wallpapers (/wallpapers/{wallpaperId})
+    match /wallpapers/{wallpaperId} {
+      allow get: if isValidId(wallpaperId) && resource.data.visibility == 'public';
+      allow list: if resource.data.visibility == 'public';
+
+      allow create: if isVerifiedUser() &&
+        isValidId(wallpaperId) &&
+        isValidWallpaper(incoming()) &&
+        incoming().authorId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().downloadsCount == 0 &&
+        incoming().savesCount == 0;
+
+      allow update: if isVerifiedUser() &&
+        isValidId(wallpaperId) &&
+        isValidWallpaper(incoming()) &&
+        incoming().authorId == existing().authorId &&
+        incoming().createdAt == existing().createdAt && (
+          isAdmin() ||
+          // Action 1: Creator updates metadata
+          (existing().authorId == request.auth.uid &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'category', 'resolutionLabel', 'accentColor'])) ||
+          // Action 2: Authenticated user increments download or save counter
+          (incoming().diff(existing()).affectedKeys().hasOnly(['downloadsCount']) &&
+            incoming().downloadsCount == existing().downloadsCount + 1) ||
+          (incoming().diff(existing()).affectedKeys().hasOnly(['savesCount']) &&
+            (incoming().savesCount == existing().savesCount + 1 || incoming().savesCount == existing().savesCount - 1))
+        );
+
+      allow delete: if isVerifiedUser() &&
+        isValidId(wallpaperId) &&
+        (existing().authorId == request.auth.uid || isAdmin());
+
+      // 4b. High-Resolution / Live Video Asset Chunks Subcollection
+      match /chunks/{chunkId} {
+        allow get: if isValidId(wallpaperId) && isValidId(chunkId) &&
+          resource.data.visibility == 'public' &&
+          exists(/databases/$(database)/documents/wallpapers/$(wallpaperId));
+
+        allow list: if resource.data.visibility == 'public';
+
+        allow create: if isVerifiedUser() &&
+          isValidId(wallpaperId) &&
+          isValidId(chunkId) &&
+          isValidWallpaperChunk(incoming(), wallpaperId) &&
+          incoming().createdAt == request.time &&
+          exists(/databases/$(database)/documents/wallpapers/$(wallpaperId)) &&
+          get(/databases/$(database)/documents/wallpapers/$(wallpaperId)).data.authorId == request.auth.uid;
+
+        allow update: if false;
+
+        allow delete: if isVerifiedUser() &&
+          isValidId(wallpaperId) &&
+          isValidId(chunkId) &&
+          (existing().authorId == request.auth.uid || isAdmin());
+      }
+    }
+
+    // 5. User Saved Wallpaper Pins (/saves/{saveId})
+    match /saves/{saveId} {
+      allow get: if isSignedIn() && isValidId(saveId) && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+
+      allow create: if isVerifiedUser() &&
+        isValidId(saveId) &&
+        isValidSavedPin(incoming()) &&
+        incoming().createdAt == request.time &&
+        exists(/databases/$(database)/documents/wallpapers/$(incoming().wallpaperId));
+
+      allow update: if isVerifiedUser() &&
+        isValidId(saveId) &&
+        isValidSavedPin(incoming()) &&
+        existing().userId == request.auth.uid &&
+        incoming().userId == existing().userId &&
+        incoming().wallpaperId == existing().wallpaperId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['boardName']);
+
+      allow delete: if isVerifiedUser() &&
+        isValidId(saveId) &&
+        existing().userId == request.auth.uid;
+    }
+  }
+}
